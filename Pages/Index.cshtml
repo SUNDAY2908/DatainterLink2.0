@@ -1,37 +1,476 @@
 ﻿@page
 @model IndexModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Email System";
 }
 
-<center><img src="images/logo.jpg" width="400" /></center>
+<style>
+ 
+    /* Existing base styles */
 
-<table class="table">
-    <thread>
-        <tr>
-            <th>From</th>
-            <th>Subject</th>
-            <th>Date/Time</th>
-            <th>Delete</th>
-        </tr>
-    </thread>
+    .table thead th {
+        background-color: #f8f9fa; /* สีเทาอ่อนแบบ Bootstrap */       
+        color: #495057; /* สีตัวอักษรเทาเข้ม */
+        font-weight: 500;
+        border-bottom: 2px solid #dee2e6;
+    }
 
-    <tbody>
-        @foreach (var item in Model.listEmails)
-        {
-            <tr>
-                <td>@item.EmailSender</td>
-                <td>
-                    @if (item.EmailIsRead.Equals("0")) {
-                        <img src="images/yellow.gif" height="10pt"> 
-                    } 
-                    <a href="ReadEmail?emailid=@item.EmailID">@item.EmailSubject</a></td>
-                <td>@item.EmailDate</td>
-                <td>
-                    <a class="btn btn-primary btn-sm" href="DeleteEmail?emailid=@item.EmailID">Delete</a>
-                </td>
-            </tr>
+    /* ปรับสีส่วนหัวกล่องข้อความด้วย */
+    .card-header {
+        background-color: #f8f9fa !important;
+        color: #495057;
+    }
+
+    .form-control {
+        color: #000000;
+        padding: 10px 15px;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        width: 100%;
+        font-size: 14px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+        position: relative;
+        padding: 0 15px;
+    }
+
+        .form-group label {
+            color: #000000;
+            font-weight: 500;
+            display: inline-block;
+            margin-bottom: 8px;
+            margin-left: 8px;
         }
-    </tbody>
-</table>
-<a class="btn btn-primary btn-sm" href="/ComposeMail?Sender=@User.Identity.Name">Compose New Email</a>
+
+    .empty-state {
+        padding: 40px;
+        text-align: center;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border: 1px dashed #dee2e6;
+    }
+
+        .empty-state h5 {
+            color: darkgrey;
+        }
+
+    .unread {
+        font-weight: 600;
+        background-color: #f8f9fa;
+    }
+
+    .email-list {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+
+    .sidebar {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+    }
+
+    /* Enhanced Modal Styles */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0);
+        transition: background-color 0.3s ease;
+        color: #000000;
+    }
+
+        .modal.show {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+    .modal-content {
+        background-color: white;
+        margin: 3% auto;
+        width: 90%;
+        max-width: 700px;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        padding: 20px;
+        opacity: 0;
+        transform: translateY(-20px);
+        transition: all 0.3s ease;
+    }
+
+    .modal.show .modal-content {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .modal-header {
+        padding: 20px;
+        border-bottom: 1px solid #dee2e6;
+        margin: -20px -20px 20px -20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-title {
+        font-size: 20px;
+        font-weight: 500;
+        margin: 0;
+    }
+
+    .close-button {
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #5f6368;
+        padding: 5px;
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.2s;
+    }
+
+        .close-button:hover {
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+
+    /* Form Enhancements */
+    .email-form {
+        padding: 0 20px;
+    }
+
+    .message-body {
+        min-height: 200px !important;
+        resize: vertical;
+    }
+
+    .required {
+        color: #d93025;
+        margin-left: 4px;
+    }
+
+    .modal-footer {
+        padding: 20px;
+        margin: 20px -20px -20px -20px;
+        border-top: 1px solid #dee2e6;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    .btn {
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-weight: 500;
+        font-size: 14px;
+        transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+        color: white;
+    }
+
+        .btn-primary:hover {
+            background-color: #0b5ed7;
+            border-color: #0a58ca;
+        }
+
+    .btn-secondary {
+        background-color: #6c757d;
+        border-color: #6c757d;
+        color: white;
+    }
+
+        .btn-secondary:hover {
+            background-color: #5c636a;
+            border-color: #565e64;
+        }
+
+    /* Loading Overlay */
+    .loading-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.8);
+        z-index: 2000;
+        justify-content: center;
+        align-items: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+        .loading-overlay.show {
+            opacity: 1;
+        }
+
+    .loading-spinner {
+        width: 50px;
+        height: 50px;
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #3498db;
+        border-radius: 50%;
+        position: relative;
+    }
+
+        .loading-spinner::after {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            right: -5px;
+            bottom: -5px;
+            border: 5px solid transparent;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            transition: transform 0.8s linear;
+            transform: rotate(0deg);
+        }
+
+    .loading-overlay.show .loading-spinner::after {
+        transform: rotate(360deg);
+    }
+</style>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-spinner"></div>
+</div>
+
+<div class="container-fluid py-4">
+    <div class="row">
+        <!-- ซ้าย: เมนูและการกระทำ -->
+        <div class="col-md-3">
+            <div class="sidebar">
+                <div class="d-grid gap-2 mb-4">
+                    <button onclick="openEmailModal()" class="btn btn-primary">
+                        <i class="fas fa-pen me-2"></i>เขียนจดหมายใหม่
+                    </button>
+                </div>
+
+                <div class="list-group">
+                    <a href="#" class="list-group-item list-group-item-action active">
+                        <i class="fas fa-inbox me-2"></i>กล่องข้อความ
+                        <span class="badge bg-primary float-end">
+                            @Model.listEmails.Count(e => e.is_read == "0")
+                        </span>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action">
+                        <i class="fas fa-paper-plane me-2"></i>ส่งแล้ว
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action">
+                        <i class="fas fa-trash me-2"></i>ถังขยะ
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ขวา: รายการอีเมล -->
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-inbox me-2"></i>กล่องข้อความ
+                    </h5>
+                    <span class="email-count">
+                        ทั้งหมด @Model.listEmails.Count() ข้อความ
+                    </span>
+                </div>
+
+                <div class="card-body p-0">
+                    <div class="email-list">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>จาก</th>
+                                    <th>หัวข้อ</th>
+                                    <th>วันที่/เวลา</th>
+                                    <th class="text-center">การกระทำ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.listEmails.Any())
+                                {
+                                    @foreach (var email in Model.listEmails)
+                                    {
+                                        <tr class="@(email.is_read == "0" ? "unread" : "")">
+                                            <td class="align-middle">
+                                                @if (email.is_read == "0")
+                                                {
+                                                    <span class="status-indicator status-unread"></span>
+                                                }
+                                                @email.sender_id
+                                            </td>
+                                            <td class="align-middle">
+                                                <a href="/ReadEmail?emailid=@email.email_id"
+                                                   class="text-decoration-none text-dark">
+                                                    @email.subject
+                                                </a>
+                                            </td>
+                                            <td class="align-middle">@email.date_time</td>
+                                            <td class="align-middle text-center">
+                                                <div class="action-buttons">
+                                                    <a href="/ReadEmail?emailid=@email.email_id"
+                                                       class="btn btn-sm btn-outline-primary"
+                                                       title="อ่าน">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <a href="/DeleteEmail?emailid=@email.email_id"
+                                                       class="btn btn-sm btn-outline-danger"
+                                                       onclick="return confirm('ยืนยันการลบอีเมลนี้?');"
+                                                       title="ลบ">
+                                                        <i class="fas fa-trash"></i>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="4">
+                                            <div class="empty-state">
+                                                <i class="fas fa-inbox fa-3x mb-3 text-muted"></i>
+                                                <h5>ไม่มีข้อความ</h5>
+                                                <p class="text-muted">ข้อความใหม่จะปรากฏที่นี่</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Email Compose Modal -->
+<div id="emailModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">ข้อความใหม่</h2>
+            <button class="close-button" onclick="closeEmailModal()">&times;</button>
+        </div>
+        <form id="emailForm" class="email-form" method="post" action="/SendEmail">
+            <div class="form-group">
+                <label>ถึง (ID ผู้รับ)<span class="required">*</span></label>
+                <input type="text" name="recipientId" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>หัวข้อ<span class="required">*</span></label>
+                <input type="text" name="subject" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>ข้อความ<span class="required">*</span></label>
+                <textarea name="message" class="form-control message-body" required></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEmailModal()">ยกเลิก</button>
+                <button type="submit" class="btn btn-primary">ส่งข้อความ</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openEmailModal() {
+        const modal = document.getElementById('emailModal');
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+        // เพิ่ม class show หลังจาก delay นิดหน่อยเพื่อให้ transition ทำงาน
+        setTimeout(() => {
+            modal.classList.add('show');
+        }, 10);
+    }
+
+    function closeEmailModal() {
+        const modal = document.getElementById('emailModal');
+        modal.classList.remove('show');
+        // รอให้ transition ทำงานเสร็จก่อนซ่อน modal
+        setTimeout(() => {
+            modal.style.display = 'none';
+            document.getElementById('emailForm').reset();
+            document.body.style.overflow = 'auto';
+        }, 300);
+    }
+
+    window.onclick = function (event) {
+        const modal = document.getElementById('emailModal');
+        if (event.target == modal) {
+            closeEmailModal();
+        }
+    }
+
+    // จัดการการส่งฟอร์ม
+    document.getElementById('emailForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        // แสดง loading overlay
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        loadingOverlay.style.display = 'flex';
+        setTimeout(() => {
+            loadingOverlay.classList.add('show');
+        }, 10);
+
+        // เก็บข้อมูลจากฟอร์ม
+        const formData = {
+            recipient_id: this.recipientId.value,
+            subject: this.subject.value,
+            body: this.message.value,
+            sender_id: '1', // สมมติว่า sender_id เป็น 1
+            date_time: new Date().toISOString(),
+            status: 'inbox',
+            is_read: 'NULL'
+        };
+
+        try {
+            const response = await fetch('/SendEmail', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
+
+            if (response.ok) {
+                // ซ่อน loading overlay และปิด modal
+                loadingOverlay.classList.remove('show');
+                setTimeout(() => {
+                    loadingOverlay.style.display = 'none';
+                }, 300);
+                closeEmailModal();
+
+                // แสดงข้อความสำเร็จ
+                alert('อีเมลถูกส่งเรียบร้อยแล้ว');
+
+                // รีโหลดหน้าเพื่อแสดงรายการอีเมลที่อัพเดท
+                window.location.reload();
+            } else {
+                throw new Error('Failed to send email');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('เกิดข้อผิดพลาดในการส่งอีเมล กรุณาลองใหม่อีกครั้ง');
+            loadingOverlay.classList.remove('show');
+            setTimeout(() => {
+                loadingOverlay.style.display = 'none';
+            }, 300);
+        }
+    });
+</script>
